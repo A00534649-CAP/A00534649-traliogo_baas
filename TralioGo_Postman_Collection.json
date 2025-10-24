@@ -1,0 +1,1062 @@
+{
+  "info": {
+    "_postman_id": "c4f8b9a5-8b2c-4e03-a111-0000-traliogo",
+    "name": "TralioGo API (Python + FastAPI + Firestore)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Colección automatizada para TralioGo API con autenticación Firebase.\n\nCARACTERÍSTICAS:\n• Token automático: Ejecuta 'GET TOKEN (Auto)' una vez\n• Auto-renovación: Los tokens se renuevan automáticamente\n• CRUD completo: Para Users, History, Objects, Flags\n• Tests incluidos: Validación automática de respuestas\n\nVARIABLES:\n• baseUrl: Endpoint de la API\n• idToken: Token Firebase (se maneja automáticamente)\n• lastId: ID del último documento creado\n• tokenExpiry: Timestamp de expiración del token\n\nUSO:\n1. Ejecuta 'AUTH > GET TOKEN (Auto)' primero\n2. Usa cualquier endpoint - el token se renueva solo\n3. Sigue el flujo CRUD: LIST → CREATE → GET → UPDATE → DELETE"
+  },
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "GET TOKEN (Auto)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"test-user-123\",\n  \"email\": \"test@trailogo.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Ejecuta PRIMERO para obtener token automáticamente.\nGuarda el token en la variable {{idToken}} para usar en otros requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Token obtenido exitosamente', function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data).to.have.property('token');",
+                  "    ",
+                  "    // Guardar token y expiración automáticamente",
+                  "    pm.environment.set('idToken', data.token);",
+                  "    pm.environment.set('tokenExpiry', Math.floor(Date.now() / 1000) + data.expires_in);",
+                  "    ",
+                  "    console.log('Token guardado automáticamente');",
+                  "    console.log('Usuario:', data.user_id);",
+                  "    console.log('Expira en:', data.expires_in, 'segundos');",
+                  "    ",
+                  "    pm.test('Token guardado en variable', function () {",
+                  "        pm.expect(pm.environment.get('idToken')).to.not.be.empty;",
+                  "    });",
+                  "} else {",
+                  "    console.log('Error obteniendo token:', pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Auth Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "health"
+              ]
+            },
+            "description": "Verifica que Firebase Auth esté configurado correctamente"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Auth service healthy', function () {",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "    const data = pm.response.json();",
+                  "    pm.expect(data.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "HISTORY",
+      "item": [
+        {
+          "name": "LIST history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history?userId=uid123&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history?userId=uid123&limit=5"
+              ]
+            },
+            "description": "Listar history con filtros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE history",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"uid123\",\n  \"sourceLang\": \"es\",\n  \"targetLang\": \"en\",\n  \"inputType\": \"text\",\n  \"text\": \"hola\",\n  \"result\": \"hello\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function(){ pm.expect(pm.response.code).to.eql(201); });",
+                  "let data = pm.response.json();",
+                  "pm.expect(data).to.have.property('id');",
+                  "pm.environment.set('lastId', data.id);",
+                  "console.log('lastId =', data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET history/{lastId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history",
+                "{{lastId}}"
+              ]
+            },
+            "description": "Obtiene el documento creado en CREATE usando {{lastId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UPDATE history/{lastId}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history",
+                "{{lastId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"hello!\",\n  \"note\": \"ajuste\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE history/{lastId}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history",
+                "{{lastId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function(){ pm.expect(pm.response.code).to.eql(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "USERS",
+      "item": [
+        {
+          "name": "LIST users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users?email=adriana@example.com&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users?email=adriana@example.com&limit=5"
+              ]
+            },
+            "description": "Listar users con filtros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE users",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"adriana@example.com\",\n  \"displayName\": \"Adriana\",\n  \"role\": \"student\",\n  \"avatarUrl\": \"https://example.com/a.png\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function(){ pm.expect(pm.response.code).to.eql(201); });",
+                  "let data = pm.response.json();",
+                  "pm.expect(data).to.have.property('id');",
+                  "pm.environment.set('lastId', data.id);",
+                  "console.log('lastId =', data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET users/{lastId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{lastId}}"
+              ]
+            },
+            "description": "Obtiene el documento creado en CREATE usando {{lastId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UPDATE users/{lastId}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{lastId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Adriana P.\",\n  \"avatarUrl\": \"https://example.com/new.png\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE users/{lastId}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{lastId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function(){ pm.expect(pm.response.code).to.eql(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "OBJECTS",
+      "item": [
+        {
+          "name": "LIST objects",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objects?createdBy=uid_carlos&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "objects?createdBy=uid_carlos&limit=5"
+              ]
+            },
+            "description": "Listar objects con filtros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE objects",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objects",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "objects"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"bottle\",\n  \"confidence\": 0.98,\n  \"imageUrl\": \"https://example.com/img.png\",\n  \"langs\": [\n    \"es\",\n    \"en\"\n  ],\n  \"createdBy\": \"uid_carlos\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function(){ pm.expect(pm.response.code).to.eql(201); });",
+                  "let data = pm.response.json();",
+                  "pm.expect(data).to.have.property('id');",
+                  "pm.environment.set('lastId', data.id);",
+                  "console.log('lastId =', data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET objects/{lastId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objects/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "objects",
+                "{{lastId}}"
+              ]
+            },
+            "description": "Obtiene el documento creado en CREATE usando {{lastId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UPDATE objects/{lastId}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objects/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "objects",
+                "{{lastId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"water bottle\",\n  \"confidence\": 0.99\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE objects/{lastId}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/objects/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "objects",
+                "{{lastId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function(){ pm.expect(pm.response.code).to.eql(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "FLAGS",
+      "item": [
+        {
+          "name": "LIST flags",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flags?scope=global&key=feature_x&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flags?scope=global&key=feature_x&limit=5"
+              ]
+            },
+            "description": "Listar flags con filtros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "CREATE flags",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flags",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flags"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"feature_x\",\n  \"value\": true,\n  \"type\": \"bool\",\n  \"scope\": \"global\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', function(){ pm.expect(pm.response.code).to.eql(201); });",
+                  "let data = pm.response.json();",
+                  "pm.expect(data).to.have.property('id');",
+                  "pm.environment.set('lastId', data.id);",
+                  "console.log('lastId =', data.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET flags/{lastId}",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flags/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flags",
+                "{{lastId}}"
+              ]
+            },
+            "description": "Obtiene el documento creado en CREATE usando {{lastId}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UPDATE flags/{lastId}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flags/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flags",
+                "{{lastId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 2xx', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200,201,204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE flags/{lastId}",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{idToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flags/{{lastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flags",
+                "{{lastId}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', function(){ pm.expect(pm.response.code).to.eql(204); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-renovación de token antes de cada request",
+          "const tokenExpiry = pm.environment.get('tokenExpiry');",
+          "const currentTime = Math.floor(Date.now() / 1000);",
+          "",
+          "// Si no hay token o está próximo a expirar (5 min antes)",
+          "if (!pm.environment.get('idToken') || (tokenExpiry && currentTime > (tokenExpiry - 300))) {",
+          "    console.log('Token expirado o próximo a expirar, renovando...');",
+          "    ",
+          "    // Solo auto-renovar si NO estamos en el endpoint de auth",
+          "    if (!pm.request.url.path.includes('auth/token')) {",
+          "        pm.sendRequest({",
+          "            url: pm.environment.get('baseUrl') + '/auth/token',",
+          "            method: 'POST',",
+          "            header: {",
+          "                'Content-Type': 'application/json'",
+          "            },",
+          "            body: {",
+          "                mode: 'raw',",
+          "                raw: JSON.stringify({",
+          "                    user_id: 'test-user-123',",
+          "                    email: 'test@trailogo.com'",
+          "                })",
+          "            }",
+          "        }, (err, res) => {",
+          "            if (err) {",
+          "                console.log('Error renovando token:', err);",
+          "                return;",
+          "            }",
+          "            ",
+          "            if (res.code === 200) {",
+          "                const data = res.json();",
+          "                pm.environment.set('idToken', data.token);",
+          "                pm.environment.set('tokenExpiry', currentTime + data.expires_in);",
+          "                console.log('Token renovado automáticamente');",
+          "            } else {",
+          "                console.log('Error renovando token:', res.status);",
+          "            }",
+          "        });",
+          "    }",
+          "} else {",
+          "    console.log('Token válido, continuando...');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "idToken",
+      "value": ""
+    },
+    {
+      "key": "lastId",
+      "value": ""
+    },
+    {
+      "key": "tokenExpiry",
+      "value": ""
+    }
+  ]
+}

@@ -75,10 +75,11 @@ logs/
 *.sqlite3
 
 # Google Cloud
-*.json
+firestore.indexes.json
 !**/requirements.txt
 service-account*.json
 credentials*.json
+test-user.json
 
 # Environment variables
 .env

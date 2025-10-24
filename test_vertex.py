@@ -24,7 +24,7 @@ def main():
         print(f"Modelo {model_name} cargado")
         
         # Generar contenido
-        prompt = "¿Qué es TralioGo y para qué sirve una app de traducción?"
+        prompt = "¿Qué es Google?"
         print(f"Enviando prompt: {prompt}")
         
         response = model.generate_content(prompt)

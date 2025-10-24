@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "userId": "uid123",
+      "sourceLang": "es",
+      "targetLang": "en",
+      "inputType": "text",
+      "text": "gracias",
+      "result": "thanks"
+    },
+    {
+      "userId": "uid456",
+      "sourceLang": "en",
+      "targetLang": "es",
+      "inputType": "text",
+      "text": "book",
+      "result": "libro"
+    }
+  ]
+}

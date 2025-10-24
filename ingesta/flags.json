@@ -1,0 +1,14 @@
+[
+  {
+    "key": "feature_y",
+    "value": false,
+    "type": "bool",
+    "scope": "global"
+  },
+  {
+    "key": "beta_ui",
+    "value": "on",
+    "type": "str",
+    "scope": "user"
+  },
+]

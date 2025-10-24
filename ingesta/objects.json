@@ -1,0 +1,21 @@
+[
+  {
+    "label": "book",
+    "confidence": 0.91,
+    "imageUrl": "https://example.com/book.png",
+    "langs": [
+      "es",
+      "en"
+    ],
+    "createdBy": "uid123"
+  },
+  {
+    "label": "phone",
+    "confidence": 0.87,
+    "imageUrl": "https://example.com/phone.png",
+    "langs": [
+      "en"
+    ],
+    "createdBy": "uid555"
+  }
+]

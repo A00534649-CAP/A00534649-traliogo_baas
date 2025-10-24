@@ -1,0 +1,14 @@
+[
+  {
+    "email": "ana@example.com",
+    "displayName": "Ana",
+    "avatarUrl": "https://example.com/ana.png",
+    "role": "student"
+  },
+  {
+    "email": "luis@example.com",
+    "displayName": "Luis",
+    "avatarUrl": "https://example.com/luis.png",
+    "role": "student"
+  }
+]
