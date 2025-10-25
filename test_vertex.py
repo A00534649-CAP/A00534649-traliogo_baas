@@ -1,12 +1,16 @@
 import os
+from dotenv import load_dotenv
 from google.cloud import aiplatform
 from vertexai import init as vertex_init
 from vertexai.generative_models import GenerativeModel
 
 def main():
+    # Cargar variables de entorno
+    load_dotenv()
+    
     project_id = os.getenv("GCLOUD_PROJECT", "trailogo-dev")
     location = os.getenv("VERTEX_LOCATION", "us-central1")
-    model_name = os.getenv("VERTEX_MODEL", "gemini-1.5-flash")
+    model_name = os.getenv("VERTEX_MODEL", "gemini-1.5-pro")
     
     print(f"Probando Vertex AI...")
     print(f"   Project: {project_id}")

@@ -80,6 +80,7 @@ firestore.indexes.json
 service-account*.json
 credentials*.json
 test-user.json
+firebase-service-account.json
 
 # Environment variables
 .env
