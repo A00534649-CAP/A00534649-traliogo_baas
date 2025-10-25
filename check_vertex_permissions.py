@@ -12,7 +12,7 @@ def main():
     location = os.getenv('VERTEX_LOCATION') 
     model_name = os.getenv('VERTEX_MODEL')
     
-    print("🔍 Verificando permisos de Vertex AI...")
+    print("Verificando permisos de Vertex AI...")
     print(f"   Project: {project_id}")
     print(f"   Model: {model_name}")
     
@@ -25,7 +25,7 @@ def main():
         
         # Cargar modelo
         model = GenerativeModel(model_name)
-        print("✅ Modelo cargado exitosamente")
+        print("Modelo cargado exitosamente")
         
         # Probar generación simple
         response = model.generate_content(
@@ -33,19 +33,19 @@ def main():
             generation_config={'max_output_tokens': 5}
         )
         
-        print(f"✅ Vertex AI funciona! Respuesta: {response.text.strip()}")
-        print("🎉 Gemini está listo para usar")
+        print(f"Vertex AI funciona! Respuesta: {response.text.strip()}")
+        print("Gemini está listo para usar")
         
         return True
         
     except Exception as e:
         error_str = str(e)
         if '403' in error_str and 'permission' in error_str.lower():
-            print("❌ Falta permiso 'Vertex AI User'")
+            print("Falta permiso 'Vertex AI User'")
             print(f"   Agregar en: https://console.cloud.google.com/iam-admin/iam?project={project_id}")
             print(f"   Cuenta: id-firebase-admin-api@{project_id}.iam.gserviceaccount.com")
         else:
-            print(f"❌ Error: {error_str}")
+            print(f"Error: {error_str}")
         return False
 
 if __name__ == "__main__":
