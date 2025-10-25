@@ -30,7 +30,7 @@ def main(base):
     # CREATE
     r = requests.post(f"{base}/secrets", json={
         "key":"demo_api_key",
-        "value":"super-123",
+        "value": os.getenv("DEMO_SECRET_VALUE", "demo-value-placeholder"),
         "labels":{"env":"dev","owner":"team"}
     }, headers=H)
     print("CREATE:", r.status_code, r.json())
@@ -44,7 +44,7 @@ def main(base):
     print("GET:", r.status_code, r.json())
 
     # UPDATE (nueva versión)
-    r = requests.put(f"{base}/secrets/demo_api_key", json={"value":"super-456"}, headers=H)
+    r = requests.put(f"{base}/secrets/demo_api_key", json={"value": os.getenv("DEMO_SECRET_UPDATE", "updated-demo-value")}, headers=H)
     print("PUT:", r.status_code, r.json())
 
     # GET latest again

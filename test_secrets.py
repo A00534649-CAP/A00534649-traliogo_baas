@@ -4,7 +4,7 @@ from google.cloud import secretmanager
 def main():
     project_id = os.getenv("GCLOUD_PROJECT", "trailogo-dev")
     secret_id = "traliogo-test-secret"
-    secret_value = "mi-secreto-super-seguro-123"
+    secret_value = os.getenv("TEST_SECRET_VALUE", "test-secret-placeholder")
     
     print(f"Probando Secret Manager...")
     print(f"   Project: {project_id}")
