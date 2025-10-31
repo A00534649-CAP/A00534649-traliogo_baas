@@ -28,9 +28,9 @@ def list_flags(scope: str | None = Query(default=None),
                _=Depends(auth_dependency)):
     q = db.collection("flags")
     if scope:
-        q = q.where("scope","==", scope)
+        q = q.where(filter=("scope","==", scope))
     if key:
-        q = q.where("key","==", key)
+        q = q.where(filter=("key","==", key))
     q = q.limit(limit)
     docs = q.stream()
     items = [_doc_to_dict(d) for d in docs]

@@ -1,0 +1,1659 @@
+openapi: 3.0.3
+info:
+  title: TralioGo Backend API
+  description: |
+    API REST completa para aplicación de traducción y aprendizaje de idiomas construido con Python, FastAPI y Google Cloud Platform.
+    
+    ## Características principales:
+    - Gestión completa de usuarios
+    - Historial de traducciones con múltiples tipos de entrada (texto, voz, imagen)
+    - Detección y gestión de objetos con URLs de imágenes y audio TTS
+    - Sistema de feature flags configurable
+    - Gestión segura de secretos con Google Cloud Secret Manager
+    - Integración con IA generativa mediante Vertex AI/Gemini
+    - Autenticación opcional con Firebase ID Tokens
+    
+    ## Tecnologías:
+    - **Backend**: Python + FastAPI
+    - **Base de datos**: Google Firestore (NoSQL)
+    - **Almacenamiento**: Google Cloud Storage
+    - **IA**: Vertex AI / Gemini
+    - **Autenticación**: Firebase Authentication
+    - **Gestión de secretos**: Google Cloud Secret Manager
+  version: 1.0.0
+  contact:
+    name: Equipo de Desarrollo TralioGo
+    email: A00534649@tec.mx
+    url: https://github.com/A00534649-CAP/A00534649-traliogo_baas
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor de desarrollo local
+  - url: https://traliogo-api-dev.cloudrun.app
+    description: Servidor de desarrollo en Google Cloud Run
+  - url: https://traliogo-api.cloudrun.app
+    description: Servidor de producción en Google Cloud Run
+
+security:
+  - BearerAuth: []
+  - {}
+
+paths:
+  /healthz:
+    get:
+      summary: Health check endpoint
+      description: Verifica el estado de la API
+      operationId: healthCheck
+      tags:
+        - health
+      security: []
+      responses:
+        '200':
+          description: API funcionando correctamente
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "ok"
+
+  /api/v1/users:
+    get:
+      summary: Listar usuarios
+      description: Obtiene una lista paginada de usuarios con filtros opcionales
+      operationId: listUsers
+      tags:
+        - users
+      parameters:
+        - name: email
+          in: query
+          description: Filtrar por email exacto
+          required: false
+          schema:
+            type: string
+            format: email
+            example: "user@example.com"
+        - name: limit
+          in: query
+          description: Número máximo de usuarios a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Lista de usuarios obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '400':
+          description: Parámetros de consulta inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Crear usuario
+      description: Crea un nuevo usuario en el sistema
+      operationId: createUser
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserIn'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{doc_id}:
+    get:
+      summary: Obtener usuario por ID
+      description: Obtiene un usuario específico por su ID
+      operationId: getUser
+      tags:
+        - users
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del usuario
+          schema:
+            type: string
+            example: "user123abc"
+      responses:
+        '200':
+          description: Usuario obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar usuario
+      description: Actualiza un usuario existente mediante merge parcial
+      operationId: updateUser
+      tags:
+        - users
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del usuario
+          schema:
+            type: string
+            example: "user123abc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                displayName: "Nuevo Nombre"
+                role: "admin"
+      responses:
+        '200':
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar usuario
+      description: Elimina un usuario del sistema
+      operationId: deleteUser
+      tags:
+        - users
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del usuario
+          schema:
+            type: string
+            example: "user123abc"
+      responses:
+        '204':
+          description: Usuario eliminado exitosamente
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/history:
+    get:
+      summary: Listar historial de traducciones
+      description: Obtiene una lista paginada del historial de traducciones con filtros opcionales
+      operationId: listHistory
+      tags:
+        - history
+      parameters:
+        - name: userId
+          in: query
+          description: Filtrar por ID de usuario
+          required: false
+          schema:
+            type: string
+            example: "user123abc"
+        - name: limit
+          in: query
+          description: Número máximo de registros a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Historial obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryListResponse'
+        '400':
+          description: Parámetros de consulta inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Crear registro de traducción
+      description: Crea un nuevo registro en el historial de traducciones
+      operationId: createHistory
+      tags:
+        - history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HistoryIn'
+      responses:
+        '201':
+          description: Registro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryOut'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/history/{doc_id}:
+    get:
+      summary: Obtener registro de historial por ID
+      description: Obtiene un registro específico del historial de traducciones
+      operationId: getHistory
+      tags:
+        - history
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del registro
+          schema:
+            type: string
+            example: "hist123abc"
+      responses:
+        '200':
+          description: Registro obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryOut'
+        '404':
+          description: Registro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar registro de historial
+      description: Actualiza un registro existente del historial
+      operationId: updateHistory
+      tags:
+        - history
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del registro
+          schema:
+            type: string
+            example: "hist123abc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                result: "Nueva traducción corregida"
+      responses:
+        '200':
+          description: Registro actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryOut'
+        '404':
+          description: Registro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar registro de historial
+      description: Elimina un registro del historial de traducciones
+      operationId: deleteHistory
+      tags:
+        - history
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del registro
+          schema:
+            type: string
+            example: "hist123abc"
+      responses:
+        '204':
+          description: Registro eliminado exitosamente
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/objects:
+    get:
+      summary: Listar objetos detectados
+      description: Obtiene una lista paginada de objetos detectados con filtros opcionales
+      operationId: listObjects
+      tags:
+        - objects
+      parameters:
+        - name: createdBy
+          in: query
+          description: Filtrar por ID del creador
+          required: false
+          schema:
+            type: string
+            example: "user123abc"
+        - name: limit
+          in: query
+          description: Número máximo de objetos a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Objetos obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectListResponse'
+        '400':
+          description: Parámetros de consulta inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Crear objeto detectado
+      description: Crea un nuevo objeto detectado en el sistema
+      operationId: createObject
+      tags:
+        - objects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectIn'
+      responses:
+        '201':
+          description: Objeto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectOut'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/objects/{doc_id}:
+    get:
+      summary: Obtener objeto por ID
+      description: Obtiene un objeto detectado específico por su ID
+      operationId: getObject
+      tags:
+        - objects
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del objeto
+          schema:
+            type: string
+            example: "obj123abc"
+      responses:
+        '200':
+          description: Objeto obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectOut'
+        '404':
+          description: Objeto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar objeto
+      description: Actualiza un objeto detectado existente
+      operationId: updateObject
+      tags:
+        - objects
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del objeto
+          schema:
+            type: string
+            example: "obj123abc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                confidence: 0.95
+                langs: ["es", "en", "fr"]
+      responses:
+        '200':
+          description: Objeto actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectOut'
+        '404':
+          description: Objeto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar objeto
+      description: Elimina un objeto detectado del sistema
+      operationId: deleteObject
+      tags:
+        - objects
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del objeto
+          schema:
+            type: string
+            example: "obj123abc"
+      responses:
+        '204':
+          description: Objeto eliminado exitosamente
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/flags:
+    get:
+      summary: Listar feature flags
+      description: Obtiene una lista paginada de feature flags con filtros opcionales
+      operationId: listFlags
+      tags:
+        - flags
+      parameters:
+        - name: scope
+          in: query
+          description: Filtrar por scope del flag
+          required: false
+          schema:
+            type: string
+            enum: [global, user]
+            example: "global"
+        - name: key
+          in: query
+          description: Filtrar por clave exacta del flag
+          required: false
+          schema:
+            type: string
+            example: "new_feature_enabled"
+        - name: limit
+          in: query
+          description: Número máximo de flags a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Feature flags obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagListResponse'
+        '400':
+          description: Parámetros de consulta inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Crear feature flag
+      description: Crea un nuevo feature flag en el sistema
+      operationId: createFlag
+      tags:
+        - flags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagIn'
+      responses:
+        '201':
+          description: Feature flag creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagOut'
+        '400':
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/flags/{doc_id}:
+    get:
+      summary: Obtener feature flag por ID
+      description: Obtiene un feature flag específico por su ID
+      operationId: getFlag
+      tags:
+        - flags
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del feature flag
+          schema:
+            type: string
+            example: "flag123abc"
+      responses:
+        '200':
+          description: Feature flag obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagOut'
+        '404':
+          description: Feature flag no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar feature flag
+      description: Actualiza un feature flag existente
+      operationId: updateFlag
+      tags:
+        - flags
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del feature flag
+          schema:
+            type: string
+            example: "flag123abc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example:
+                value: true
+                type: "bool"
+      responses:
+        '200':
+          description: Feature flag actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlagOut'
+        '404':
+          description: Feature flag no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar feature flag
+      description: Elimina un feature flag del sistema
+      operationId: deleteFlag
+      tags:
+        - flags
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          description: ID único del feature flag
+          schema:
+            type: string
+            example: "flag123abc"
+      responses:
+        '204':
+          description: Feature flag eliminado exitosamente
+        '401':
+          description: Token de autenticación requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/secrets:
+    get:
+      summary: Listar secretos
+      description: Obtiene una lista de secretos almacenados en Google Cloud Secret Manager
+      operationId: listSecrets
+      tags:
+        - secrets
+      parameters:
+        - name: prefix
+          in: query
+          description: Filtrar secretos por prefijo en el nombre
+          required: false
+          schema:
+            type: string
+            example: "api_"
+      responses:
+        '200':
+          description: Secretos obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretListResponse'
+        '400':
+          description: Error en la consulta a Secret Manager
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Crear secreto
+      description: Crea un nuevo secreto en Google Cloud Secret Manager
+      operationId: createSecret
+      tags:
+        - secrets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretCreate'
+      responses:
+        '201':
+          description: Secreto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretResponse'
+        '400':
+          description: Error al crear el secreto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/secrets/{key}:
+    get:
+      summary: Obtener valor de secreto
+      description: Obtiene el valor de la versión más reciente de un secreto
+      operationId: getSecret
+      tags:
+        - secrets
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Clave única del secreto
+          schema:
+            type: string
+            example: "api_key_openai"
+      responses:
+        '200':
+          description: Valor del secreto obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretValueResponse'
+        '404':
+          description: Secreto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar secreto
+      description: Crea una nueva versión del secreto con el valor actualizado
+      operationId: updateSecret
+      tags:
+        - secrets
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Clave única del secreto
+          schema:
+            type: string
+            example: "api_key_openai"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretUpdate'
+      responses:
+        '200':
+          description: Secreto actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecretUpdateResponse'
+        '400':
+          description: Error al actualizar el secreto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar secreto
+      description: Elimina completamente un secreto de Google Cloud Secret Manager
+      operationId: deleteSecret
+      tags:
+        - secrets
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Clave única del secreto
+          schema:
+            type: string
+            example: "api_key_openai"
+      responses:
+        '204':
+          description: Secreto eliminado exitosamente
+        '400':
+          description: Error al eliminar el secreto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/prompts:
+    get:
+      summary: Listar prompts ejecutados
+      description: Obtiene una lista paginada de prompts ejecutados con IA
+      operationId: listPrompts
+      tags:
+        - ai-prompts
+      parameters:
+        - name: limit
+          in: query
+          description: Número máximo de prompts a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+      responses:
+        '200':
+          description: Prompts obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptListResponse'
+        '400':
+          description: Error en la consulta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Ejecutar prompt con IA
+      description: Ejecuta un prompt usando Vertex AI/Gemini y almacena el resultado
+      operationId: executePrompt
+      tags:
+        - ai-prompts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptIn'
+      responses:
+        '201':
+          description: Prompt ejecutado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptExecutionResponse'
+        '400':
+          description: Error en el prompt o configuración
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Cuota de Vertex AI excedida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Permisos de Vertex AI en propagación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/prompts/{id}:
+    get:
+      summary: Obtener prompt por ID
+      description: Obtiene un prompt específico y su resultado
+      operationId: getPrompt
+      tags:
+        - ai-prompts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único del prompt
+          schema:
+            type: string
+            example: "prompt123abc"
+      responses:
+        '200':
+          description: Prompt obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptExecutionResponse'
+        '404':
+          description: Prompt no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Actualizar metadatos de prompt
+      description: Actualiza metadatos como notas del prompt (no re-ejecuta)
+      operationId: updatePrompt
+      tags:
+        - ai-prompts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único del prompt
+          schema:
+            type: string
+            example: "prompt123abc"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptUpdate'
+      responses:
+        '200':
+          description: Prompt actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptExecutionResponse'
+        '404':
+          description: Prompt no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Eliminar prompt
+      description: Elimina un prompt y su resultado del historial
+      operationId: deletePrompt
+      tags:
+        - ai-prompts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único del prompt
+          schema:
+            type: string
+            example: "prompt123abc"
+      responses:
+        '204':
+          description: Prompt eliminado exitosamente
+
+  /api/v1/auth/token:
+    post:
+      summary: Generar token de prueba
+      description: Genera un token de Firebase para testing automático (solo para desarrollo)
+      operationId: generateTestToken
+      tags:
+        - auth
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Token generado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '500':
+          description: Error interno al generar token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/health:
+    get:
+      summary: Verificar estado de autenticación
+      description: Verifica que Firebase Admin esté configurado correctamente
+      operationId: authHealth
+      tags:
+        - auth
+      security: []
+      responses:
+        '200':
+          description: Estado de autenticación obtenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthHealthResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token de autenticación Firebase (opcional según configuración)
+
+  schemas:
+    # Esquemas de entrada (Input)
+    UserIn:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email único del usuario
+          example: "user@example.com"
+        displayName:
+          type: string
+          nullable: true
+          description: Nombre para mostrar del usuario
+          example: "Juan Pérez"
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL del avatar del usuario
+          example: "https://example.com/avatar.jpg"
+        role:
+          type: string
+          nullable: true
+          default: "student"
+          description: Rol del usuario en el sistema
+          example: "student"
+        createdAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fecha de creación (se asigna automáticamente si no se proporciona)
+          example: "2023-01-15T10:30:00Z"
+
+    UserOut:
+      allOf:
+        - $ref: '#/components/schemas/UserIn'
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              description: ID único del usuario
+              example: "user123abc"
+
+    HistoryIn:
+      type: object
+      required:
+        - userId
+        - sourceLang
+        - targetLang
+        - inputType
+        - text
+        - result
+      properties:
+        userId:
+          type: string
+          description: ID del usuario que realizó la traducción
+          example: "user123abc"
+        sourceLang:
+          type: string
+          description: Código del idioma de origen
+          example: "es"
+        targetLang:
+          type: string
+          description: Código del idioma de destino
+          example: "en"
+        inputType:
+          type: string
+          enum: [text, voice, image]
+          description: Tipo de entrada utilizada para la traducción
+          example: "text"
+        text:
+          type: string
+          description: Texto original a traducir
+          example: "Hola mundo"
+        result:
+          type: string
+          description: Resultado de la traducción
+          example: "Hello world"
+        ts:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp de la traducción (se asigna automáticamente si no se proporciona)
+          example: "2023-01-15T10:30:00Z"
+
+    HistoryOut:
+      allOf:
+        - $ref: '#/components/schemas/HistoryIn'
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              description: ID único del registro de historial
+              example: "hist123abc"
+
+    ObjectIn:
+      type: object
+      required:
+        - label
+      properties:
+        label:
+          type: string
+          description: Etiqueta identificativa del objeto detectado
+          example: "apple"
+        confidence:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 1
+          description: Nivel de confianza de la detección (0.0 a 1.0)
+          example: 0.95
+        imageUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de la imagen del objeto
+          example: "https://storage.googleapis.com/bucket/image.jpg"
+        langs:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Códigos de idiomas disponibles para este objeto
+          example: ["es", "en", "fr"]
+        ttsUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL del archivo de audio TTS para el objeto
+          example: "https://storage.googleapis.com/bucket/audio.mp3"
+        createdBy:
+          type: string
+          nullable: true
+          description: ID del usuario que creó el objeto
+          example: "user123abc"
+        ts:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp de creación (se asigna automáticamente si no se proporciona)
+          example: "2023-01-15T10:30:00Z"
+
+    ObjectOut:
+      allOf:
+        - $ref: '#/components/schemas/ObjectIn'
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              description: ID único del objeto
+              example: "obj123abc"
+
+    FlagIn:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+          description: Clave única del feature flag
+          example: "new_feature_enabled"
+        value:
+          description: Valor del feature flag (puede ser cualquier tipo JSON)
+          example: true
+        type:
+          type: string
+          enum: [bool, str, num, json]
+          nullable: true
+          description: Tipo de dato del valor
+          example: "bool"
+        scope:
+          type: string
+          enum: [global, user]
+          nullable: true
+          default: "global"
+          description: Ámbito del feature flag
+          example: "global"
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp de última actualización (se asigna automáticamente si no se proporciona)
+          example: "2023-01-15T10:30:00Z"
+
+    FlagOut:
+      allOf:
+        - $ref: '#/components/schemas/FlagIn'
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: string
+              description: ID único del feature flag
+              example: "flag123abc"
+
+    SecretCreate:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description: ID único del secreto en el proyecto
+          example: "api_key_openai"
+        value:
+          type: string
+          description: Contenido de la versión inicial del secreto
+          example: "sk-1234567890abcdef"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          nullable: true
+          description: Etiquetas metadata para el secreto
+          example:
+            environment: "development"
+            service: "ai"
+
+    SecretUpdate:
+      type: object
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          description: Nuevo valor del secreto (crea una nueva versión)
+          example: "sk-newkey1234567890"
+
+    PromptIn:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Texto del prompt a enviar al modelo de IA
+          example: "Traduce la siguiente frase al inglés: 'Hola mundo'"
+        model:
+          type: string
+          nullable: true
+          description: Override del modelo a utilizar (opcional)
+          example: "gemini-1.5-pro"
+
+    PromptUpdate:
+      type: object
+      properties:
+        note:
+          type: string
+          nullable: true
+          description: Nota o comentario sobre el prompt
+          example: "Prompt corregido para mejor precisión"
+
+    LoginRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          default: "test-user-123"
+          description: ID del usuario para generar token de prueba
+          example: "test-user-123"
+        email:
+          type: string
+          format: email
+          nullable: true
+          default: "test@trailogo.com"
+          description: Email del usuario para testing
+          example: "test@trailogo.com"
+
+    # Esquemas de respuesta
+    UserListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserOut'
+          description: Lista de usuarios
+          example:
+            - id: "user123abc"
+              email: "user@example.com"
+              displayName: "Juan Pérez"
+              role: "student"
+              createdAt: "2023-01-15T10:30:00Z"
+
+    HistoryListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryOut'
+          description: Lista de registros de historial
+
+    ObjectListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectOut'
+          description: Lista de objetos detectados
+
+    FlagListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FlagOut'
+          description: Lista de feature flags
+
+    SecretListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: ID del secreto
+                example: "api_key_openai"
+              labels:
+                type: object
+                additionalProperties:
+                  type: string
+                description: Etiquetas del secreto
+                example:
+                  environment: "development"
+          description: Lista de secretos disponibles
+
+    SecretResponse:
+      type: object
+      required:
+        - id
+        - labels
+      properties:
+        id:
+          type: string
+          description: ID del secreto creado
+          example: "api_key_openai"
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+          description: Etiquetas del secreto
+          example:
+            environment: "development"
+
+    SecretValueResponse:
+      type: object
+      required:
+        - id
+        - value
+      properties:
+        id:
+          type: string
+          description: ID del secreto
+          example: "api_key_openai"
+        value:
+          type: string
+          description: Valor actual del secreto
+          example: "sk-1234567890abcdef"
+
+    SecretUpdateResponse:
+      type: object
+      required:
+        - id
+        - updated
+      properties:
+        id:
+          type: string
+          description: ID del secreto actualizado
+          example: "api_key_openai"
+        updated:
+          type: boolean
+          description: Confirmación de actualización
+          example: true
+
+    PromptListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PromptExecutionResponse'
+          description: Lista de prompts ejecutados
+
+    PromptExecutionResponse:
+      type: object
+      required:
+        - id
+        - prompt
+        - model
+        - output
+        - ts
+      properties:
+        id:
+          type: string
+          description: ID único del prompt ejecutado
+          example: "prompt123abc"
+        prompt:
+          type: string
+          description: Texto del prompt enviado
+          example: "Traduce la siguiente frase al inglés: 'Hola mundo'"
+        model:
+          type: string
+          description: Modelo utilizado para la ejecución
+          example: "gemini-1.5-flash"
+        output:
+          type: string
+          description: Respuesta generada por el modelo de IA
+          example: "Translate the following phrase to English: 'Hello world'"
+        ts:
+          type: string
+          format: date-time
+          description: Timestamp de ejecución
+          example: "2023-01-15T10:30:00Z"
+        note:
+          type: string
+          nullable: true
+          description: Nota o comentario adicional
+          example: "Prompt para traducción bidireccional"
+
+    TokenResponse:
+      type: object
+      required:
+        - token
+        - expires_in
+        - user_id
+      properties:
+        token:
+          type: string
+          description: Token de autenticación Firebase generado
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires_in:
+          type: integer
+          description: Tiempo de expiración en segundos
+          example: 3600
+        user_id:
+          type: string
+          description: ID del usuario para el cual se generó el token
+          example: "test-user-123"
+
+    AuthHealthResponse:
+      type: object
+      required:
+        - status
+        - firebase_admin
+        - can_generate_tokens
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          description: Estado general del servicio de autenticación
+          example: "ok"
+        firebase_admin:
+          type: string
+          description: Estado de inicialización de Firebase Admin
+          example: "initialized"
+        can_generate_tokens:
+          type: boolean
+          description: Capacidad de generar tokens
+          example: true
+        error:
+          type: string
+          nullable: true
+          description: Mensaje de error si existe algún problema
+          example: null
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          description: Descripción del error ocurrido
+          example: "not_found"
+
+tags:
+  - name: health
+    description: Endpoints de verificación de estado
+  - name: users
+    description: Gestión de usuarios del sistema
+  - name: history
+    description: Historial de traducciones realizadas
+  - name: objects
+    description: Objetos detectados y clasificados
+  - name: flags
+    description: Feature flags para configuración dinámica
+  - name: secrets
+    description: Gestión segura de secretos con Google Cloud Secret Manager
+  - name: ai-prompts
+    description: Ejecución de prompts con IA generativa (Vertex AI/Gemini)
+  - name: auth
+    description: Autenticación y generación de tokens (desarrollo)
